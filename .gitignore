@@ -6,6 +6,7 @@ cline
 
 # Testing
 coverage/
+Focus-Flow-*/
 
 # Production
 dist/
