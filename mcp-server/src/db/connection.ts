@@ -21,7 +21,7 @@ if (!existsSync(dataDir)) {
 }
 
 // Create database connection
-const db = new Database(DB_PATH);
+const db: import('better-sqlite3').Database = new Database(DB_PATH);
 
 // Enable WAL mode for better concurrency
 db.pragma('journal_mode = WAL');

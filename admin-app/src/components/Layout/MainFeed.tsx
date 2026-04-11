@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { Ticket, TicketStatus } from '../../api/client';
-import { Search, Filter, Clock, AlertCircle, CheckCircle2, MoreHorizontal, ArrowRight, Terminal, TrendingUp } from 'lucide-react';
+import { Search, Clock, AlertCircle, CheckCircle2, MoreHorizontal, ArrowRight, Terminal, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface MainFeedProps {
@@ -67,15 +67,7 @@ const LiveSystemLogs = () => (
     </div>
 );
 
-const MOCK_TICKETS = [
-    { id: 'T-F97568', title: 'Unauthenticated error on Movielo app across multiple devices', component: 'Authentication', priority: 'CRITICAL', status: 'APPROVED_FOR_PROD', desc: 'User reports being unable to stream videos on the Movielo app due to an Unauthenticated error. The issue occurs on both...' },
-    { id: 'T-303EA6', title: 'User is not defined error in Order Lo', component: 'Auth/Session', priority: 'HIGH', status: 'PENDING', desc: 'The user is experiencing a user is not defined error while using the Order Lo mobile application...' },
-    { id: 'T-5CEF9S', title: 'Unauthenticated URL error during order submission', component: 'Checkout', priority: 'HIGH', status: 'PENDING', desc: 'User Aditya Jaiswal (Employee ID: 9992) reported an URL is unauthenticated error appearing when...' },
-    { id: 'T-F8476E', title: 'Orders not displaying in Order Lo app', component: 'Order Mgmt', priority: 'MEDIUM', status: 'IN_PROGRESS', desc: 'The user reports that their orders are not visible within the Order Lo mobile application. They have...' },
-    { id: 'T-D62DA8', title: 'Laptop Speaker Not Working', component: 'Hardware', priority: 'LOW', status: 'REVIEW_PENDING', desc: 'The user reported that the speakers on their laptop are not functioning. Preliminary checks on volume...' },
-];
-
-const MainFeed: React.FC<MainFeedProps> = ({ tickets = [], onSelectTicket, statusFilter = 'ALL', setStatusFilter }) => {
+const MainFeed: React.FC<MainFeedProps> = ({ tickets = [], statusFilter = 'ALL', setStatusFilter }) => {
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
 

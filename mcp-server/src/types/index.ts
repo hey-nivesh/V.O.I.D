@@ -34,6 +34,65 @@ export interface TestResults {
 }
 
 // ============================================
+// Zone 3: Diagnosis Types
+// ============================================
+
+export type DiagnosisStatus = 'PENDING' | 'SANDBOXED' | 'ANALYZING' | 'COMPLETE' | 'FAILED';
+
+export interface FailureChainStep {
+    step: number;
+    file: string;
+    line: number;
+    description: string;
+    severity: 'root_cause' | 'propagation' | 'symptom';
+}
+
+export interface RCAReport {
+    patient_zero: {
+        file: string;
+        line: number;
+        function?: string;
+    };
+    failure_chain: FailureChainStep[];
+    confidence: number;          // 0.0 - 1.0
+    diagnosis_summary: string;
+    recommended_fix_hints: string[];
+    pii_masked: boolean;
+}
+
+export interface SandboxSession {
+    id: string;
+    ticket_id: string;
+    container_id?: string;
+    jit_token: string;
+    jit_expires_at: string;
+    status: 'provisioning' | 'ready' | 'analyzing' | 'terminated';
+    logs?: string[];
+    created_at: string;
+    terminated_at?: string;
+}
+
+export interface PIIMaskingReport {
+    emails_masked: number;
+    ips_masked: number;
+    tokens_masked: number;
+    phone_numbers_masked: number;
+    api_keys_masked: number;
+    total_fields_scanned: number;
+}
+
+// Zone 6: Tunnel Types
+export interface TunnelSession {
+    ticket_id: string;
+    tunnel_url: string;
+    local_port: number;
+    pid?: number;
+    status: 'starting' | 'active' | 'stopped' | 'error';
+    started_at: string;
+    stopped_at?: string;
+}
+
+// ============================================
 // Database Models
 // ============================================
 
@@ -61,6 +120,11 @@ export interface Ticket {
     approved_by?: string;
     approval_note?: string;
     rejection_reason?: string;
+    // Zone 3 fields
+    diagnosis_status?: DiagnosisStatus;
+    rca_report?: RCAReport;
+    patient_zero_file?: string;
+    patient_zero_line?: number;
     created_at: string;
     updated_at: string;
 }
@@ -145,6 +209,17 @@ export interface RegisterPreviewRequest {
     expires_at?: string;
 }
 
+// Diagnosis
+export interface StartDiagnosisRequest {
+    force?: boolean; // Re-run even if already complete
+}
+
+// Tunnel
+export interface StartTunnelRequest {
+    ticket_id: string;
+    port?: number;
+}
+
 // ============================================
 // SSE Event Types
 // ============================================
@@ -155,7 +230,16 @@ export type SSEEventType =
     | 'ticket.submitted_fix'
     | 'ticket.approved'
     | 'ticket.rejected'
-    | 'preview.registered';
+    | 'preview.registered'
+    // Zone 3: Diagnosis events
+    | 'diagnosis.started'
+    | 'diagnosis.complete'
+    | 'diagnosis.failed'
+    | 'sandbox.provisioned'
+    | 'sandbox.terminated'
+    // Zone 6: Tunnel events
+    | 'tunnel.started'
+    | 'tunnel.stopped';
 
 export interface SSEEvent {
     type: SSEEventType;

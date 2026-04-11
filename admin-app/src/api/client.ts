@@ -85,6 +85,50 @@ export const systemAPI = {
     }>('/api/events/status'),
 };
 
+// Diagnosis API
+export const diagnosisAPI = {
+    start: (ticketId: string, force = false) =>
+        apiFetch<{ ticket_id: string; diagnosis_status: string; message: string }>(
+            `/api/diagnosis/${ticketId}/start`,
+            {
+                method: 'POST',
+                body: JSON.stringify({ force }),
+            }
+        ),
+
+    getReport: (ticketId: string) =>
+        apiFetch<{
+            ticket_id: string;
+            diagnosis_status: string;
+            rca_report: any;
+            patient_zero: { file: string; line: number } | null;
+        }>(`/api/diagnosis/${ticketId}/report`),
+};
+
+// Tunnel API
+export const tunnelAPI = {
+    start: (ticketId: string, port = 8080) => // Defaulting admin app to 8080
+        apiFetch<{ tunnel_url: string; status: string; cloudflared_available: boolean }>(
+            '/api/tunnel/start',
+            {
+                method: 'POST',
+                body: JSON.stringify({ ticket_id: ticketId, port }),
+            }
+        ),
+
+    stop: (ticketId: string) =>
+        apiFetch<{ message: string }>(
+            '/api/tunnel/stop',
+            {
+                method: 'POST',
+                body: JSON.stringify({ ticket_id: ticketId }),
+            }
+        ),
+
+    getStatus: (ticketId: string) =>
+        apiFetch<{ tunnel: any; cloudflared_available: boolean }>(`/api/tunnel/status/${ticketId}`),
+};
+
 // Types
 export type TicketStatus = 'PENDING' | 'IN_PROGRESS' | 'REVIEW_PENDING' | 'APPROVED_FOR_PROD' | 'CLOSED' | 'REOPENED';
 

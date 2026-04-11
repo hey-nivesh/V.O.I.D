@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Editor } from '@monaco-editor/react';
 import { useAuth } from '../hooks/useAuth';
-import { ticketsAPI, type Ticket } from '../api/client';
+import { ticketsAPI, type Ticket, diagnosisAPI, tunnelAPI } from '../api/client';
 import MainLayout from '../components/Layout/MainLayout';
-import { ArrowLeft, User, Bot, Code2 } from 'lucide-react';
+import { ArrowLeft, User, Bot, Code2, Activity, Cloud } from 'lucide-react';
 
 export default function TicketDetailPage() {
     const { ticketId } = useParams<{ ticketId: string }>();
@@ -22,6 +22,10 @@ export default function TicketDetailPage() {
     const [rejectReason, setRejectReason] = useState('');
     const [requestChanges, setRequestChanges] = useState(true);
 
+    // Zone 3 & 6 state
+    const [diagnosis, setDiagnosis] = useState<{ status: string, rca_report: any, patient_zero: { file: string, line: number } | null } | null>(null);
+    const [tunnel, setTunnel] = useState<{ tunnel_url?: string, status: string, cloudflared_available: boolean } | null>(null);
+
     useEffect(() => {
         if (!ticketId) return;
 
@@ -30,6 +34,22 @@ export default function TicketDetailPage() {
             const response = await ticketsAPI.get(ticketId);
             if (response.success && response.data) {
                 setTicket(response.data.ticket);
+                // Fetch Zone 3 & 6 data
+                const diagRes = await diagnosisAPI.getReport(ticketId);
+                if (diagRes.success && diagRes.data) {
+                    setDiagnosis({
+                        status: diagRes.data.diagnosis_status || 'PENDING',
+                        rca_report: diagRes.data.rca_report,
+                        patient_zero: diagRes.data.patient_zero
+                    });
+                }
+                const tunnelRes = await tunnelAPI.getStatus(ticketId);
+                if (tunnelRes.success && tunnelRes.data) {
+                    setTunnel(tunnelRes.data.tunnel ? { 
+                        ...tunnelRes.data.tunnel, 
+                        cloudflared_available: tunnelRes.data.cloudflared_available 
+                    } : null);
+                }
             } else {
                 setError(response.error || 'Failed to load ticket');
             }
@@ -42,6 +62,39 @@ export default function TicketDetailPage() {
     const showToast = (type: 'success' | 'error', message: string) => {
         setToast({ type, message });
         setTimeout(() => setToast(null), 4000);
+    };
+
+    const handleStartDiagnosis = async () => {
+        if (!ticket) return;
+        setActionLoading(true);
+        const res = await diagnosisAPI.start(ticket.id);
+        if (res.success) {
+            showToast('success', 'Diagnosis pipeline started!');
+            setDiagnosis({ status: 'PENDING', rca_report: null, patient_zero: null });
+        } else {
+            showToast('error', res.error || 'Failed to start diagnosis');
+        }
+        setActionLoading(false);
+    };
+
+    const handleStartTunnel = async () => {
+        if (!ticket) return;
+        setActionLoading(true);
+        // We'll pass 8080 as the local port to tunnel, but the API does it by default
+        const res = await tunnelAPI.start(ticket.id);
+        if (res.success && res.data) {
+            showToast('success', 'Tunnel started successfully!');
+            setTunnel({
+                tunnel_url: res.data.tunnel_url,
+                status: res.data.status,
+                cloudflared_available: res.data.cloudflared_available
+            });
+            // Update ticket sandbox url
+            setTicket(prev => prev ? { ...prev, sandbox_preview_url: res.data?.tunnel_url } : null);
+        } else {
+            showToast('error', res.error || 'Failed to start tunnel');
+        }
+        setActionLoading(false);
     };
 
     const handleApprove = async () => {
@@ -167,18 +220,49 @@ export default function TicketDetailPage() {
                         </div>
 
                         {/* AI Analysis */}
-                        <div className="bg-white/90 backdrop-blur-xl p-5 rounded-2xl shadow-sm border border-white/50 flex-1 transition-all hover:shadow-md">
-                            <div className="flex items-center gap-2 mb-4">
-                                <Bot className="w-4 h-4 text-[--color-accent]" />
-                                <h3 className="font-bold text-gray-900">AI Analysis</h3>
+                        <div className="bg-white/90 backdrop-blur-xl p-5 rounded-2xl shadow-sm border border-white/50 flex-1 transition-all hover:shadow-md flex flex-col">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2">
+                                    <Bot className="w-4 h-4 text-[--color-accent]" />
+                                    <h3 className="font-bold text-gray-900">Diagnosis & RCA</h3>
+                                </div>
+                                {(ticket.status === 'PENDING' || ticket.status === 'IN_PROGRESS') && (
+                                    <button 
+                                        onClick={handleStartDiagnosis}
+                                        disabled={actionLoading || diagnosis?.status === 'SANDBOXED' || diagnosis?.status === 'ANALYZING'}
+                                        className="text-xs px-3 py-1 bg-blue-50 text-blue-600 font-bold rounded-lg hover:bg-blue-100 disabled:opacity-50 transition-colors"
+                                    >
+                                        Run Diagnosis
+                                    </button>
+                                )}
                             </div>
-                            {ticket.test_results?.logs ? (
-                                <p className="text-sm text-gray-600 leading-relaxed max-h-[200px] overflow-y-auto custom-scrollbar">
-                                    {ticket.test_results.logs}
-                                </p>
-                            ) : (
-                                <p className="text-sm text-gray-400 italic">No analysis logs available.</p>
-                            )}
+                            
+                            <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 max-h-[300px]">
+                                {diagnosis?.status === 'COMPLETE' && diagnosis.rca_report ? (
+                                    <div className="flex flex-col gap-3">
+                                        <div className="bg-red-50 text-red-800 p-3 rounded-lg text-xs font-mono border border-red-100">
+                                            <p className="font-bold mb-1 flex items-center gap-1">🚨 Patient Zero</p>
+                                            {diagnosis.patient_zero?.file}:{diagnosis.patient_zero?.line}
+                                        </div>
+                                        <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                                            {diagnosis.rca_report.diagnosis_summary}
+                                        </p>
+                                    </div>
+                                ) : diagnosis?.status === 'FAILED' ? (
+                                    <p className="text-sm text-red-500 italic">Diagnosis failed.</p>
+                                ) : diagnosis?.status ? (
+                                    <div className="flex items-center gap-2 text-sm text-blue-600 animate-pulse">
+                                        <Activity className="w-4 h-4" />
+                                        Pipeline Status: {diagnosis.status}
+                                    </div>
+                                ) : ticket.test_results?.logs ? (
+                                    <p className="text-sm text-gray-600 leading-relaxed">
+                                        {ticket.test_results.logs}
+                                    </p>
+                                ) : (
+                                    <p className="text-sm text-gray-400 italic">No analysis available.</p>
+                                )}
+                            </div>
                         </div>
                     </div>
 
@@ -226,28 +310,51 @@ export default function TicketDetailPage() {
                     </div>
                 </div>
 
-                {/* Additional Preview if available */}
-                {ticket.sandbox_preview_url && (
-                    <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-sm border border-white/50 overflow-hidden mt-6 transition-all hover:shadow-md">
-                        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-                            <span className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                {/* Tunnel Preview section */}
+                <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-sm border border-white/50 overflow-hidden mt-6 transition-all hover:shadow-md">
+                    <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                        <span className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                            {tunnel?.status === 'active' ? (
                                 <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                                Live Environment Support
-                            </span>
-                            <a href={ticket.sandbox_preview_url} target="_blank" className="text-xs text-blue-600 hover:underline flex items-center gap-1">
-                                Open Fullscreen <span className="text-[10px]">↗</span>
-                            </a>
+                            ) : (
+                                <Cloud className="w-4 h-4 text-gray-400" />
+                            )}
+                            Live Environment Support
+                        </span>
+                        <div className="flex items-center gap-3">
+                            {ticket.status === 'REVIEW_PENDING' && tunnel?.status !== 'active' && (
+                                <button
+                                    onClick={handleStartTunnel}
+                                    disabled={actionLoading}
+                                    className="text-xs px-3 py-1.5 bg-[--color-accent] text-white font-bold rounded-lg hover:opacity-90 disabled:opacity-50 flex items-center gap-1 transition-opacity"
+                                >
+                                    <Cloud className="w-3 h-3" />
+                                    Start Tunnel
+                                </button>
+                            )}
+                            {(tunnel?.status === 'active' || ticket.sandbox_preview_url) && (
+                                <a href={ticket.sandbox_preview_url || tunnel?.tunnel_url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline flex items-center gap-1 bg-blue-50 px-2 py-1 rounded">
+                                    Open Fullscreen <span className="text-[10px]">↗</span>
+                                </a>
+                            )}
                         </div>
-                        <div className="relative w-full h-[500px] bg-gray-50">
+                    </div>
+                    {tunnel?.status === 'active' || ticket.sandbox_preview_url ? (
+                        <div className="relative w-full h-[500px] bg-white">
                             <iframe
-                                src={ticket.sandbox_preview_url}
-                                className="w-full h-full"
+                                src={ticket.sandbox_preview_url || tunnel?.tunnel_url}
+                                className="w-full h-full border-0"
                                 title="Preview"
                                 sandbox="allow-scripts allow-same-origin allow-forms"
                             />
                         </div>
-                    </div>
-                )}
+                    ) : (
+                        <div className="h-[200px] flex flex-col items-center justify-center text-gray-500 text-sm bg-gray-50/50">
+                            <Cloud className="w-8 h-8 mb-2 opacity-20" />
+                            <span>No active tunnel. Start tunnel to preview changes.</span>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Action Buttons (Admin Only) */}
@@ -265,7 +372,7 @@ export default function TicketDetailPage() {
                         disabled={actionLoading}
                         className="px-5 py-2 rounded-full bg-emerald-500 text-white hover:bg-emerald-600 transition-colors font-bold text-sm shadow-md align-middle flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {actionLoading ? 'Processing...' : 'Approve Fix'}
+                        {actionLoading ? 'Processing...' : 'Approve & Deploy'}
                     </button>
                 </div>
             )}
