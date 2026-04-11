@@ -38,6 +38,15 @@ function parseTicket(row: Record<string, unknown>): Ticket {
     } as Ticket;
 }
 
+function sessionUserExists(userId: string): boolean {
+    return db.prepare('SELECT 1 FROM users WHERE id = ?').get(userId) !== undefined;
+}
+
+function isSqliteForeignKeyError(e: unknown): boolean {
+    const err = e as { code?: string; message?: string };
+    return err.code === 'SQLITE_CONSTRAINT_FOREIGNKEY' || Boolean(err.message?.includes('FOREIGN KEY constraint failed'));
+}
+
 export async function ticketRoutes(fastify: FastifyInstance): Promise<void> {
 
     /**
@@ -96,9 +105,11 @@ export async function ticketRoutes(fastify: FastifyInstance): Promise<void> {
             let query = 'SELECT * FROM tickets WHERE 1=1';
             const params: unknown[] = [];
 
-            // fix_agent can only see PENDING tickets by default
+            // fix_agent: PENDING/REOPENED to claim, plus own IN_PROGRESS (resume after failed verify/orchestrator)
             if (user.role === 'fix_agent' && !status) {
-                query += " AND status = 'PENDING'";
+                query +=
+                    " AND (status IN ('PENDING', 'REOPENED') OR (status = 'IN_PROGRESS' AND claimed_by = ?))";
+                params.push(user.id);
             } else if (status) {
                 query += ' AND status = ?';
                 params.push(status);
@@ -109,7 +120,8 @@ export async function ticketRoutes(fastify: FastifyInstance): Promise<void> {
                 params.push(priority);
             }
 
-            query += ' ORDER BY CASE priority WHEN \'CRITICAL\' THEN 1 WHEN \'HIGH\' THEN 2 WHEN \'MEDIUM\' THEN 3 ELSE 4 END, created_at DESC';
+            query +=
+                " ORDER BY CASE status WHEN 'PENDING' THEN 0 WHEN 'REOPENED' THEN 1 WHEN 'IN_PROGRESS' THEN 2 ELSE 3 END, CASE priority WHEN 'CRITICAL' THEN 1 WHEN 'HIGH' THEN 2 WHEN 'MEDIUM' THEN 3 ELSE 4 END, created_at DESC";
             query += ` LIMIT ${parseInt(limit, 10)}`;
 
             const rows = db.prepare(query).all(...params) as Record<string, unknown>[];
@@ -181,12 +193,29 @@ export async function ticketRoutes(fastify: FastifyInstance): Promise<void> {
                 } as APIResponse);
             }
 
+            if (!sessionUserExists(user.id)) {
+                return reply.code(401).send({
+                    success: false,
+                    error: 'Session user no longer exists (database was re-seeded). Please log in again.'
+                } as APIResponse);
+            }
+
             const now = new Date().toISOString();
-            db.prepare(`
+            try {
+                db.prepare(`
         UPDATE tickets 
         SET status = 'IN_PROGRESS', claimed_by = ?, updated_at = ?
         WHERE id = ?
       `).run(user.id, now, ticket_id);
+            } catch (e: unknown) {
+                if (isSqliteForeignKeyError(e)) {
+                    return reply.code(400).send({
+                        success: false,
+                        error: 'Claim failed: user id is not valid for this database. Log in again after a reset.'
+                    } as APIResponse);
+                }
+                throw e;
+            }
 
             AuditService.log(user.username, 'ticket.claimed', { ticket_id });
 
@@ -308,8 +337,16 @@ export async function ticketRoutes(fastify: FastifyInstance): Promise<void> {
                 } as APIResponse);
             }
 
+            if (!sessionUserExists(user.id)) {
+                return reply.code(401).send({
+                    success: false,
+                    error: 'Session user no longer exists (database was re-seeded). Please log in again.'
+                } as APIResponse);
+            }
+
             const now = new Date().toISOString();
-            db.prepare(`
+            try {
+                db.prepare(`
         UPDATE tickets 
         SET status = 'APPROVED_FOR_PROD',
             approved_by = ?,
@@ -317,6 +354,15 @@ export async function ticketRoutes(fastify: FastifyInstance): Promise<void> {
             updated_at = ?
         WHERE id = ?
       `).run(user.id, note || null, now, ticket_id);
+            } catch (e: unknown) {
+                if (isSqliteForeignKeyError(e)) {
+                    return reply.code(400).send({
+                        success: false,
+                        error: 'Approve failed: user id is not valid for this database. Log in again after a reset.'
+                    } as APIResponse);
+                }
+                throw e;
+            }
 
             AuditService.log(user.username, 'ticket.approved', { ticket_id, approved_by, note });
 

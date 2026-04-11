@@ -3,12 +3,13 @@
 // ============================================
 
 import 'dotenv/config';
-import Fastify from 'fastify';
+import Fastify, { type FastifyRequest, type FastifyReply } from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
 import { runMigrations, seedDatabase } from './db/index.js';
-import { authRoutes, ticketRoutes, previewRoutes, eventsRoutes } from './routes/index.js';
+import { authRoutes, ticketRoutes, previewRoutes, eventsRoutes, pushApprovalRoutes } from './routes/index.js';
+import { startPushApprovalFileWatcher } from './services/pushApprovalWatcher.js';
 import { logger } from './utils/logger.js';
 import type { JWTPayload } from './types/index.js';
 
@@ -53,7 +54,8 @@ await fastify.register(cors, {
 await fastify.register(jwt, {
     secret: JWT_SECRET,
     sign: {
-        expiresIn: process.env.JWT_EXPIRES_IN || '1h'
+        // Long-running agents (fix-agent) need a token that outlives idle + work; override via JWT_EXPIRES_IN.
+        expiresIn: process.env.JWT_EXPIRES_IN || '24h'
     }
 });
 
@@ -107,6 +109,7 @@ await fastify.register(async (instance) => {
 
     await instance.register(ticketRoutes, { prefix: '/tickets' });
     await instance.register(previewRoutes, { prefix: '/previews' });
+    await instance.register(pushApprovalRoutes);
 }, { prefix: '/api' });
 
 // Events (SSE) with its own route outside rate limit
@@ -147,6 +150,8 @@ async function start() {
         logger.success(`Server running at http://${HOST}:${PORT}`);
         logger.info(`SSE endpoint: /api/events`);
         logger.info(`Rate limiting enabled`);
+        startPushApprovalFileWatcher();
+        logger.info(`Push approval watcher: approval.json → SSE push_approval.changed`);
     } catch (err) {
         fastify.log.error(err);
         process.exit(1);

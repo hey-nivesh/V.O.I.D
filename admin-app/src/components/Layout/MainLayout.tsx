@@ -1,6 +1,8 @@
 import React from 'react';
 import Sidebar from './Sidebar';
 import RightPanel from './RightPanel';
+import { useAuth } from '../../hooks/useAuth';
+import PushApprovalBanner from '../PushApprovalBanner';
 
 interface LayoutProps {
     children: React.ReactNode;
@@ -8,6 +10,7 @@ interface LayoutProps {
 }
 
 const MainLayout: React.FC<LayoutProps> = ({ children, showRightPanel = true }) => {
+    const { user } = useAuth();
     return (
         <div className="min-h-screen flex font-sans p-4 gap-4">
             {/* Left Rail Sidebar */}
@@ -19,6 +22,7 @@ const MainLayout: React.FC<LayoutProps> = ({ children, showRightPanel = true }) 
             <main className="flex-1 flex gap-4 min-w-0 z-10">
                 {/* Center Content (Grid) */}
                 <div className="flex-1 min-w-0 flex flex-col">
+                    {user?.role === 'admin' && <PushApprovalBanner />}
                     {children}
                 </div>
 

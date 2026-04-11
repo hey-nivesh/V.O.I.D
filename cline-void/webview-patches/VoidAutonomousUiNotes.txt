@@ -1,0 +1,18 @@
+VOID-Fixer UI integration (Cline webview on http://localhost:25463/)
+
+1) Extension host: when calling startVoidFix(), also postMessage to webview:
+   { type: "voidFixActive", value: true, ticketId: "<id>" }
+   On completion / error: { type: "voidFixActive", value: false }
+
+2) webview-ui: in ExtensionStateContext (or equivalent), add state voidAutonomousActive + voidFixTicketId.
+   Hydrate from postMessage in the existing VS Code message listener.
+
+3) Render <VoidActiveBadge active={voidAutonomousActive} ticketId={voidFixTicketId} /> next to the Cline logo / chat header.
+
+4) While voidAutonomousActive:
+   - Disable primary "Stop" / "Edit" controls (same pattern as when a tool is running).
+   - Optional: pointer-events: none on those buttons with aria-disabled.
+
+5) Proto/grpc: if your fork uses UiService, add optional fields void_autonomous_active on next stream update instead of ad-hoc messages.
+
+Reference upstream layout: https://github.com/cline/cline/tree/main/webview-ui/src
