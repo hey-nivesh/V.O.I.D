@@ -22,6 +22,10 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import db from './db/connection.js';
 import type { Ticket } from './types/index.js';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
 
 // Create MCP Server
 const server = new McpServer({
@@ -296,6 +300,67 @@ server.tool(
                 },
             ],
         };
+    }
+);
+
+// ---------------------------------------------------------------------------
+// Tool: trigger_sentinel
+// ---------------------------------------------------------------------------
+server.tool(
+    'trigger_sentinel',
+    'Run the Sentinel Agent to replicate bugs (Zone 2) or verify fixes (Zone 5) on a physical device via ADB.',
+    {
+        packageName: z.string().describe('The package name of the app to test'),
+        s2rSteps: z.array(z.object({
+            x: z.number(),
+            y: z.number()
+        })).describe('Array of X/Y coordinates for steps to reproduce the issue'),
+        zone: z.enum(['zone2', 'zone5']).optional().default('zone2').describe('Which zone logic to execute (zone2 for replication, zone5 for fix verification)')
+    },
+    async ({ packageName, s2rSteps, zone }) => {
+        try {
+            // We use tsx to dynamically execute the SentinelAgent in the sentinel-agent directory
+            // This avoids complex cross-project typescript compilation issues
+            const sentinelScript = `
+                import { SentinelAgent } from '../../sentinel-agent/src/index.js';
+                const agent = new SentinelAgent();
+                const steps = ${JSON.stringify(s2rSteps)};
+                
+                async function main() {
+                    const result = await agent.${zone === 'zone5' ? 'runZone5' : 'runZone2'}('${packageName}', steps);
+                    console.log(JSON.stringify(result));
+                }
+                main().catch(e => { console.error(e); process.exit(1); });
+            `;
+            
+            // To run this easily, we can just execute the TS code via tsx and eval,
+            // or simply invoke the python bridge directly from MCP since it's just child_process anyway.
+            // But to adhere strictly to "Implement a class SentinelAgent that uses child_process...", 
+            // we will spawn a tsx process that uses the SentinelAgent class.
+            
+            const tmpScriptPath = './temp_sentinel_run.ts';
+            const fs = await import('fs');
+            fs.writeFileSync(tmpScriptPath, sentinelScript);
+            
+            const { stdout } = await execAsync(\`npx tsx \${tmpScriptPath}\`);
+            fs.unlinkSync(tmpScriptPath);
+            
+            const resultObj = JSON.parse(stdout.trim().split('\\n').pop() || '{}');
+            
+            return {
+                content: [
+                    {
+                        type: 'text',
+                        text: JSON.stringify(resultObj, null, 2),
+                    },
+                ],
+            };
+        } catch (e: any) {
+             return {
+                content: [{ type: 'text', text: \`Sentinel Error: \${e.message}\` }],
+                isError: true,
+            };
+        }
     }
 );
 

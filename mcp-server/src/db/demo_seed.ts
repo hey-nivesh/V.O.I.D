@@ -2,12 +2,16 @@
 import db from './connection.js';
 import { createHash } from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
+import { runMigrations } from './migrate.js';
 
 function hashPassword(password: string): string {
     return createHash('sha256').update(password).digest('hex');
 }
 
 async function seed() {
+    // Run migrations first to ensure tables exist
+    runMigrations();
+    
     console.log('🌱 Seeding demo data...');
 
     // 1. Clear existing data
