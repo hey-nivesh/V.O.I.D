@@ -5,9 +5,10 @@
 import type { FastifyRequest, FastifyReply, HookHandlerDoneFunction } from 'fastify';
 import type { JWTPayload, UserRole } from '../types/index.js';
 
-declare module 'fastify' {
-    interface FastifyRequest {
-        user?: JWTPayload;
+declare module '@fastify/jwt' {
+    interface FastifyJWT {
+        payload: JWTPayload;
+        user: JWTPayload;
     }
 }
 

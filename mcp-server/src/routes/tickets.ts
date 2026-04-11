@@ -326,8 +326,32 @@ export async function ticketRoutes(fastify: FastifyInstance): Promise<void> {
                 note
             });
 
-            // Optionally call webhook for CI/deploy
-            // TODO: Implement webhook call if WEBHOOK_URL is set
+            // Zone 6: Call webhook for CI/deploy if configured
+            const webhookUrl = process.env.WEBHOOK_URL;
+            if (webhookUrl) {
+                // Fire-and-forget webhook call
+                fetch(webhookUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        event: 'ticket.approved',
+                        ticket_id,
+                        approved_by,
+                        note,
+                        timestamp: now
+                    })
+                }).then(res => {
+                    AuditService.log(user.username, 'webhook.sent', {
+                        ticket_id, webhook_url: webhookUrl, status: res.status
+                    });
+                    console.log(`🔔 [Webhook] Sent approval to ${webhookUrl} (${res.status})`);
+                }).catch(err => {
+                    AuditService.log(user.username, 'webhook.failed', {
+                        ticket_id, webhook_url: webhookUrl, error: err.message
+                    });
+                    console.error(`🔔 [Webhook] Failed:`, err.message);
+                });
+            }
 
             return reply.send({
                 success: true,

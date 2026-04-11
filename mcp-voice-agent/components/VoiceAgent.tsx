@@ -98,7 +98,11 @@ const VoiceAgent: React.FC<Props> = ({ userContext }) => {
   };
 
   const startSession = async () => {
-    if (!aiClientRef.current) return;
+    if (!aiClientRef.current) {
+      console.error('[VoiceAgent] Cannot start session: GEMINI_API_KEY is not configured in .env.local');
+      alert('API Key not configured!\n\nPlease add your Gemini API key to .env.local:\nGEMINI_API_KEY=your_key_here\n\nThen restart the dev server.');
+      return;
+    }
 
     setCallState('connecting');
     setTranscripts([]);
