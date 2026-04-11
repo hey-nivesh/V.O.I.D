@@ -1,0 +1,13 @@
+{
+  "metadata": {
+    "analyzer": "Sherlock-Zero",
+    "timestamp": "2026-04-11T19:01:57.411Z",
+    "security": "SOC2 JIT Compliant (PII Redacted)"
+  },
+  "rca": {
+    "patientZero": "Unable to determine Patient Zero from OS trace.",
+    "confidence": 0.9,
+    "errorClass": "FATAL EXCEPTION: main\\njava.lang.NullPointerException: fake trace"
+  },
+  "maskedLogSnippet": "FATAL EXCEPTION: main\\njava.lang.NullPointerException: fake trace...\n[TRUNCATED]"
+}

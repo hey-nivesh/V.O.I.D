@@ -1,0 +1,19 @@
+{
+  "name": "sentinel-agent",
+  "version": "1.0.0",
+  "description": "VOID Protocol Sentinel-Agent (Zones 2 & 5)",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@types/dockerode": "^4.0.1",
+    "dockerode": "^4.0.10"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  }
+}

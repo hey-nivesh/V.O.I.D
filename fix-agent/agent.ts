@@ -2,7 +2,7 @@ import EventSource from 'eventsource';
 import fetch from 'node-fetch';
 import chalk from 'chalk';
 
-const BASE_URL = 'http://localhost:3000';
+const BASE_URL = 'http://0.0.0.0:3000';
 const AGENT_CREDENTIALS = {
     username: 'fixagent',
     password: 'fixpass'
