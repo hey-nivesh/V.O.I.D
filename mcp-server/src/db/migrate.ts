@@ -161,7 +161,50 @@ export function runMigrations(): void {
     CREATE INDEX IF NOT EXISTS idx_previews_ticket ON previews(ticket_id);
   `);
 
+<<<<<<< HEAD
     relaxTicketsUserForeignKeysIfNeeded();
+=======
+    // ============================================
+    // Zone 3: Diagnosis Tables & Columns
+    // ============================================
+
+    // Create sandbox_sessions table
+    db.exec(`
+    CREATE TABLE IF NOT EXISTS sandbox_sessions (
+      id TEXT PRIMARY KEY,
+      ticket_id TEXT NOT NULL,
+      container_id TEXT,
+      jit_token TEXT NOT NULL,
+      jit_expires_at TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'provisioning' CHECK (status IN ('provisioning', 'ready', 'analyzing', 'terminated')),
+      logs TEXT DEFAULT '[]',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      terminated_at TEXT,
+      FOREIGN KEY (ticket_id) REFERENCES tickets(id)
+    )
+  `);
+
+    db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_sandbox_ticket ON sandbox_sessions(ticket_id);
+    CREATE INDEX IF NOT EXISTS idx_sandbox_status ON sandbox_sessions(status);
+  `);
+
+    // Add Zone 3 columns to tickets (safe to call multiple times)
+    const ticketColumns = [
+        { name: 'diagnosis_status', type: 'TEXT DEFAULT NULL' },
+        { name: 'rca_report', type: 'TEXT DEFAULT NULL' },
+        { name: 'patient_zero_file', type: 'TEXT DEFAULT NULL' },
+        { name: 'patient_zero_line', type: 'INTEGER DEFAULT NULL' },
+    ];
+
+    for (const col of ticketColumns) {
+        try {
+            db.exec(`ALTER TABLE tickets ADD COLUMN ${col.name} ${col.type}`);
+        } catch {
+            // Column already exists — safe to ignore
+        }
+    }
+>>>>>>> e91fdf8afb1163580bb017e74401126d82bece29
 
     console.log('✅ Database migrations completed');
 }

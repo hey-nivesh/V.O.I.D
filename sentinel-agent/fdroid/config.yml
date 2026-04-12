@@ -1,0 +1,10 @@
+sdk_path: "C:/Users/LENOVO/AppData/Local/Android/Sdk"
+repo_name: "VOID Sentinel Local Repo"
+repo_description: "Autonomous Verification Repository for VOID Protocol"
+# Using your stable 36.0.0 build tools
+build_tools: "36.0.0"
+apksigner: "C:/Users/LENOVO/AppData/Local/Android/Sdk/build-tools/36.0.0/apksigner.bat"
+repo_keyalias: ASTITVA.bennett.edu.in
+keydname: CN=ASTITVA.bennett.edu.in, OU=F-Droid
+keystorepass: MrRXdx8yzvTpKl1NsnI6Lxrs21FLdQ+Wqn/N3NTaAL4=
+keypass: MrRXdx8yzvTpKl1NsnI6Lxrs21FLdQ+Wqn/N3NTaAL4=

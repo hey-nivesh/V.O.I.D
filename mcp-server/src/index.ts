@@ -8,8 +8,12 @@ import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
 import { runMigrations, seedDatabase } from './db/index.js';
+<<<<<<< HEAD
 import { authRoutes, ticketRoutes, previewRoutes, eventsRoutes, pushApprovalRoutes } from './routes/index.js';
 import { startPushApprovalFileWatcher } from './services/pushApprovalWatcher.js';
+=======
+import { authRoutes, ticketRoutes, previewRoutes, eventsRoutes, diagnosisRoutes, tunnelRoutes } from './routes/index.js';
+>>>>>>> e91fdf8afb1163580bb017e74401126d82bece29
 import { logger } from './utils/logger.js';
 import type { JWTPayload } from './types/index.js';
 
@@ -109,7 +113,12 @@ await fastify.register(async (instance) => {
 
     await instance.register(ticketRoutes, { prefix: '/tickets' });
     await instance.register(previewRoutes, { prefix: '/previews' });
+<<<<<<< HEAD
     await instance.register(pushApprovalRoutes);
+=======
+    await instance.register(diagnosisRoutes, { prefix: '/diagnosis' });
+    await instance.register(tunnelRoutes, { prefix: '/tunnel' });
+>>>>>>> e91fdf8afb1163580bb017e74401126d82bece29
 }, { prefix: '/api' });
 
 // Events (SSE) with its own route outside rate limit

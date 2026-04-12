@@ -1,0 +1,1 @@
+FATAL EXCEPTION: main\njava.lang.NullPointerException: fake trace
