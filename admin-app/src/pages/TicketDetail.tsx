@@ -16,6 +16,7 @@ export default function TicketDetailPage() {
     const [actionLoading, setActionLoading] = useState(false);
     const [error, setError] = useState('');
     const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+    const [pushGate, setPushGate] = useState<PushApprovalState | null>(null);
 
     // Reject modal state
     const [showRejectModal, setShowRejectModal] = useState(false);
@@ -58,6 +59,27 @@ export default function TicketDetailPage() {
 
         fetchTicket();
     }, [ticketId]);
+
+    useEffect(() => {
+        if (!ticketId || user?.role !== 'admin') return;
+        const loadGate = async () => {
+            const r = await pushApprovalAPI.get();
+            if (r.success && r.data) {
+                setPushGate(r.data.approval);
+            }
+        };
+        void loadGate();
+        if (ticket?.status !== 'IN_PROGRESS') {
+            return;
+        }
+        const t = setInterval(() => void loadGate(), 4000);
+        const onChanged = () => void loadGate();
+        window.addEventListener('void-push-approval-changed', onChanged);
+        return () => {
+            clearInterval(t);
+            window.removeEventListener('void-push-approval-changed', onChanged);
+        };
+    }, [ticketId, user?.role, ticket?.status]);
 
     const showToast = (type: 'success' | 'error', message: string) => {
         setToast({ type, message });
@@ -136,6 +158,19 @@ export default function TicketDetailPage() {
         setActionLoading(false);
     };
 
+    const handlePushGate = async (status: 'approved' | 'rejected') => {
+        setActionLoading(true);
+        const res = await pushApprovalAPI.setStatus(status);
+        if (res.success) {
+            showToast('success', status === 'approved' ? 'Push approved — fix agent will continue.' : 'Push rejected.');
+            const r = await pushApprovalAPI.get();
+            if (r.success && r.data) setPushGate(r.data.approval);
+        } else {
+            showToast('error', res.error || 'Failed to update push approval');
+        }
+        setActionLoading(false);
+    };
+
     if (isLoading) {
         return (
             <MainLayout showRightPanel={false}>
@@ -202,6 +237,37 @@ export default function TicketDetailPage() {
                         <p className="leading-relaxed">{ticket.description || "No description provided."}</p>
                     </div>
                 </div>
+
+                {user?.role === 'admin' &&
+                    pushGate?.status === 'pending' &&
+                    pushGate.ticketId === ticket.id &&
+                    ticket.status === 'IN_PROGRESS' && (
+                        <div className="rounded-2xl border border-amber-200 bg-amber-50/90 px-5 py-4 shadow-sm">
+                            <p className="text-sm font-bold text-amber-900">Git push waiting for your approval</p>
+                            <p className="mt-1 text-xs text-amber-800">
+                                Orchestrator verified the build. Approve to let the fix agent commit and push branch{' '}
+                                <span className="font-mono font-semibold">{pushGate.branch ?? 'fix/ticket-*'}</span>.
+                            </p>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                                <button
+                                    type="button"
+                                    disabled={actionLoading}
+                                    onClick={() => void handlePushGate('approved')}
+                                    className="rounded-full bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+                                >
+                                    Approve push
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={actionLoading}
+                                    onClick={() => void handlePushGate('rejected')}
+                                    className="rounded-full border border-red-300 bg-white px-4 py-2 text-xs font-bold text-red-700 hover:bg-red-50 disabled:opacity-50"
+                                >
+                                    Reject
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
                     {/* Left Col: Context & Analysis */}

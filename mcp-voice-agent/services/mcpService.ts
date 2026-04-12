@@ -28,7 +28,10 @@ export const loginAsVoiceAgent = async (): Promise<boolean> => {
   }
 };
 
-export const submitTicketToMCP = async (ticket: TicketPayload): Promise<{ success: boolean; ticket_id?: string; error?: string }> => {
+export const submitTicketToMCP = async (
+  ticket: TicketPayload,
+  isRetry = false
+): Promise<{ success: boolean; ticket_id?: string; error?: string }> => {
   // Auto-login if no token
   if (!authToken) {
     const loggedIn = await loginAsVoiceAgent();
@@ -63,12 +66,18 @@ export const submitTicketToMCP = async (ticket: TicketPayload): Promise<{ succes
         success: true,
         ticket_id: data.data.ticket_id
       };
-    } else {
-      return {
-        success: false,
-        error: data.error || 'Failed to create ticket'
-      };
     }
+
+    if (response.status === 401 && !isRetry) {
+      console.warn('[MCP Service] Token rejected — re-logging in and retrying once');
+      authToken = null;
+      return submitTicketToMCP(ticket, true);
+    }
+
+    return {
+      success: false,
+      error: data.error || 'Failed to create ticket'
+    };
   } catch (error) {
     console.error('[MCP Service] Request failed:', error);
     return {

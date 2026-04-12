@@ -1,0 +1,8 @@
+{
+  "ticketId": "FF-102",
+  "targetRepo": "v.o.i.d/Focus-Flow-",
+  "relevantPaths": ["src/logic/timer.ts", "tests/timer.test.ts"],
+  "rawError": "Timer state resets to zero unexpectedly when 'Pause' is clicked. Expected: State preservation. Actual: State reset.",
+  "verificationCommand": "npm run test src/logic/timer.ts",
+  "baseBranch": "main"
+}

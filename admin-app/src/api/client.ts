@@ -77,6 +77,27 @@ export const ticketsAPI = {
         }),
 };
 
+/** Git push gate (orchestrator / VOID-Fixer) — same file as fix-agent `v.o.i.d/approval.json` */
+export interface PushApprovalState {
+    status: 'pending' | 'approved' | 'rejected';
+    summary?: string;
+    ticketId?: string;
+    branch?: string;
+    updatedAt?: string;
+    decidedBy?: string;
+    decisionNote?: string;
+}
+
+export const pushApprovalAPI = {
+    get: () => apiFetch<{ approval: PushApprovalState | null }>('/api/push-approval'),
+
+    setStatus: (status: 'approved' | 'rejected', note?: string) =>
+        apiFetch<{ approval: PushApprovalState }>('/api/push-approval', {
+            method: 'POST',
+            body: JSON.stringify({ status, note })
+        })
+};
+
 // System API
 export const systemAPI = {
     status: () => apiFetch<{

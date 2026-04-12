@@ -231,6 +231,9 @@ export type SSEEventType =
     | 'ticket.approved'
     | 'ticket.rejected'
     | 'preview.registered'
+<<<<<<< HEAD
+    | 'push_approval.changed';
+=======
     // Zone 3: Diagnosis events
     | 'diagnosis.started'
     | 'diagnosis.complete'
@@ -240,6 +243,7 @@ export type SSEEventType =
     // Zone 6: Tunnel events
     | 'tunnel.started'
     | 'tunnel.stopped';
+>>>>>>> e91fdf8afb1163580bb017e74401126d82bece29
 
 export interface SSEEvent {
     type: SSEEventType;

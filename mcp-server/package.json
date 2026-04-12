@@ -14,7 +14,8 @@
     "format": "prettier --write src/**/*.ts",
     "seed": "tsx src/db/seed.ts",
     "migrate": "tsx src/db/migrate.ts",
-    "mcp": "tsx src/mcp-protocol.ts"
+    "mcp": "tsx src/mcp-protocol.ts",
+    "sample:ticket": "tsx src/scripts/create_test_ticket.ts"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.1",
