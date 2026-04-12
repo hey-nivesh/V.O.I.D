@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "protocol_version": "1.0.0",
+    "timestamp": "2026-04-11T23:15:00Z",
+    "ticket_id": "VOID-7892-ALPHA",
+    "priority": "P0 - Critical"
+  },
+  "gatekeeper_context": {
+    "session_id": "sess_01HRA293",
+    "jit_token": "void_tmp_a82jsh29",
+    "expiry_unix": 1712885400,
+    "sandbox_path": "E:\\\\VOID\\\\V.O.I.D\\\\Focus-Flow-"
+  },
+  "sherlock_diagnosis": {
+    "issue_summary": "Example: user-facing UI or app behavior in Focus Flow.",
+    "patient_zero": {
+      "file": "src/App.tsx",
+      "line_number": 1,
+      "code_snippet": ""
+    },
+    "failure_chain": ["Reported via VOID protocol"],
+    "relevant_paths": ["src"]
+  },
+  "void_fixer_instructions": {
+    "target_branch_base": "main",
+    "mode": "autonomous_fix",
+    "self_healing_attempts": 3,
+    "verification_command": "npm run build",
+    "styling_rules": "Match existing project style."
+  },
+  "hyper_context_payload": {
+    "last_logcat_lines": [],
+    "product_fix_repo_path": "E:\\\\VOID\\\\V.O.I.D\\\\Focus-Flow-"
+  }
+}

@@ -38,9 +38,12 @@ async function main() {
 
     const ticketData: any = await ticketRes.json();
     if (ticketData.success) {
-        console.log(`✅ Ticket Created: ${ticketData.data.id}`);
+        const id = ticketData.data?.ticket_id ?? ticketData.data?.id;
+        console.log(`✅ Ticket Created: ${id}`);
+        console.log('Fix agent (if running) will pick this up via SSE or pending poll.');
     } else {
         console.error('Failed to create ticket:', ticketData);
+        process.exitCode = 1;
     }
 }
 

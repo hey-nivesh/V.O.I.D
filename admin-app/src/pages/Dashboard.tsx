@@ -25,8 +25,11 @@ export default function DashboardPage() {
 
     // Handle SSE events
     const handleSSEEvent = useCallback((event: { type: string; payload: Record<string, unknown> }) => {
-        // Refresh tickets on relevant events
         if (event.type.startsWith('ticket.')) {
+            fetchTickets();
+        }
+        if (event.type === 'push_approval.changed') {
+            window.dispatchEvent(new CustomEvent('void-push-approval-changed', { detail: event.payload }));
             fetchTickets();
         }
     }, [fetchTickets]);

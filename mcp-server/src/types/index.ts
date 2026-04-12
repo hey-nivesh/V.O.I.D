@@ -155,7 +155,8 @@ export type SSEEventType =
     | 'ticket.submitted_fix'
     | 'ticket.approved'
     | 'ticket.rejected'
-    | 'preview.registered';
+    | 'preview.registered'
+    | 'push_approval.changed';
 
 export interface SSEEvent {
     type: SSEEventType;

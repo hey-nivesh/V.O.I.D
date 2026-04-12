@@ -2,9 +2,11 @@
 node_modules/
 .pnp
 .pnp.js
+cline
 
 # Testing
 coverage/
+Focus-Flow-*/
 
 # Production
 dist/

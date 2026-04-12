@@ -1,0 +1,14 @@
+{
+    "name": "cline-void",
+    "private": true,
+    "version": "0.0.0",
+    "type": "module",
+    "description": "VOID-Fixer integration layer for Cline (copy into cline/cline or import from extension host)",
+    "scripts": {
+        "typecheck": "tsc --noEmit"
+    },
+    "devDependencies": {
+        "@types/node": "^20.14.0",
+        "typescript": "^5.6.0"
+    }
+}
