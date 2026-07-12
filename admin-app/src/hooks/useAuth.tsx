@@ -38,10 +38,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 }
                 setIsLoading(false);
             });
-        } else {
+        } else if (import.meta.env.DEV) {
             // "Remove Auth" request: Auto-login as admin for dev convenience
             console.log('🔌 Auto-logging in as admin...');
             authAPI.login('admin', 'adminpass').then((response) => {
+        } else {
+            setIsLoading(false);
                 if (response.success && response.data) {
                     const { token: newToken, user: userData } = response.data;
                     localStorage.setItem('void_token', newToken);
