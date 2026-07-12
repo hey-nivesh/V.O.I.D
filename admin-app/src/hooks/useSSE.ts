@@ -13,6 +13,8 @@ export function useSSE(onEvent?: (event: SSEEvent) => void) {
     const [error, setError] = useState<string | null>(null);
     const eventSourceRef = useRef<EventSource | null>(null);
     const reconnectTimeoutRef = useRef<number | null>(null);
+    const onEventRef = useRef(onEvent);
+    useEffect(() => { onEventRef.current = onEvent; }, [onEvent]);
 
     const connect = useCallback(() => {
         const token = getToken();
